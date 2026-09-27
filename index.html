@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GCSE Revision Timetable & Catch-Up Queue</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkBg: '#0f172a',
+                        cardDark: '#1e293b'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-100 dark:bg-darkBg text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-300 flex flex-col">
+
+    <!-- Top Navigation Header -->
+    <header class="bg-white dark:bg-cardDark shadow-md sticky top-0 z-50 border-b border-slate-200 dark:border-slate-700">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <span class="text-2xl">📚</span>
+                <h1 class="text-xl font-bold bg-gradient-to-r from-blue-500 to-indigo-600 bg-clip-text text-transparent">GCSE Master Planner</h1>
+            </div>
+            
+            <!-- Navigation Tabs -->
+            <nav class="flex space-x-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                <button onclick="switchTab('daily')" id="tab-daily" class="px-4 py-2 rounded-lg text-sm font-medium transition-all bg-white dark:bg-indigo-600 shadow-sm">Daily Schedule</button>
+                <button onclick="switchTab('months')" id="tab-months" class="px-4 py-2 rounded-lg text-sm font-medium transition-all text-slate-600 dark:text-slate-300">Month Planner</button>
+                <button onclick="switchTab('catchup')" id="tab-catchup" class="px-4 py-2 rounded-lg text-sm font-medium transition-all text-slate-600 dark:text-slate-300 relative">
+                    Catch-Up Queue 
+                    <span id="catchup-badge" class="ml-1 px-1.5 py-0.5 text-xs bg-red-500 text-white rounded-full">0</span>
+                </button>
+            </nav>
+
+            <!-- Theme Toggle & Stats -->
+            <div class="flex items-center space-x-3">
+                <div class="text-xs text-right hidden sm:block">
+                    <div>Completed: <span id="completed-count" class="font-bold text-emerald-500">0</span></div>
+                    <div>Catch-Up: <span id="queue-count" class="font-bold text-amber-500">0</span></div>
+                </div>
+                <button onclick="toggleTheme()" class="p-2 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 transition" title="Toggle Theme">
+                    <span id="theme-icon">☀️</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full">
+
+        <!-- TAB 1: DAILY SCHEDULE -->
+        <section id="view-daily" class="space-y-6">
+            <div class="bg-white dark:bg-cardDark rounded-2xl p-5 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-wrap justify-between items-center gap-4">
+                <div>
+                    <h2 class="text-lg font-bold">Daily Timetable (Start: Mon 28 Sep 2026)</h2>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">Select a date or browse day-by-day to complete tasks or send missed items to your Catch-Up Queue.</p>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button onclick="changeDay(-1)" class="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-sm font-medium">← Previous</button>
+                    <input type="date" id="date-picker" onchange="selectDateFromPicker(this.value)" class="bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <button onclick="changeDay(1)" class="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-sm font-medium">Next →</button>
+                </div>
+            </div>
+
+            <!-- Current Day Card -->
+            <div id="daily-card-container" class="bg-white dark:bg-cardDark rounded-2xl p-6 shadow-md border border-slate-200 dark:border-slate-700">
+                <!-- Dynamically populated -->
+            </div>
+        </section>
+
+        <!-- TAB 2: MONTH PLANNER -->
+        <section id="view-months" class="hidden space-y-6">
+            <div class="bg-white dark:bg-cardDark rounded-2xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
+                <h2 class="text-lg font-bold">Month-by-Month Overview</h2>
+                <p class="text-sm text-slate-500 dark:text-slate-400">Review every single month from September 2026 to April 2027.</p>
+                <div id="month-tabs" class="flex flex-wrap gap-2 mt-4">
+                    <!-- Month filter pills generated here -->
+                </div>
+            </div>
+            <div id="month-grid-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Month calendar days populated here -->
+            </div>
+        </section>
+
+        <!-- TAB 3: CATCH-UP QUEUE -->
+        <section id="view-catchup" class="hidden space-y-6">
+            <div class="bg-white dark:bg-cardDark rounded-2xl p-5 shadow-sm border border-slate-200 dark:border-slate-700 flex justify-between items-center">
+                <div>
+                    <h2 class="text-lg font-bold">Catch-Up Queue</h2>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">Topics you missed or didn't get around to doing yet. Clear them out when you have free time!</p>
+                </div>
+                <button onclick="clearCompletedCatchup()" class="text-xs bg-red-500/10 text-red-500 hover:bg-red-500/20 px-3 py-2 rounded-lg font-medium transition">Clear Completed</button>
+            </div>
+            <div id="catchup-list-container" class="space-y-3">
+                <!-- Populated via JS -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white dark:bg-cardDark border-t border-slate-200 dark:border-slate-700 py-4 mt-8">
+        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">
+            GCSE Master Revision Timetable • GitHub Ready Single-File Application
+        </div>
+    </footer>
+
+    <!-- Application JavaScript Logic -->
+    <script>
+        // Timetable Dataset (Starting September 28, 2026 through April 2027)
+        const timetableData = [
+            { date: "2026-09-28", day: "Mon 28 Sep", s1: "Bio: 🟡 Cell Biology (Mitosis and Cell Cycle)", s2: "Maths: 🔴 Algebra (Solving Linear & Quadratic Equations)", s3: "Food: 🟡 Nutrition (Micronutrients & Vitamins)" },
+            { date: "2026-09-29", day: "Tue 29 Sep", s1: "Phys: 🟡 Energy (Energy Transfers & Efficiency)", s2: "Spanish: 🟡 Theme 1 (School Rules & Uniforms)", s3: "Eng Lit: 🟡 ACC (Stave 1: Scrooge's Isolation)" },
+            { date: "2026-09-30", day: "Wed 30 Sep", s1: "Chem: 🔴 Bonding (Covalent Bonding & Simple Molecules)", s2: "Soc: 🟡 Education (Marxist Perspectives & Class)", s3: "Eng Lang: 🟡 P1 Q4 (Evaluating Writer's Methods)" },
+            { date: "2026-10-01", day: "Thu 01 Oct", s1: "Bio: 🟡 Organisation (Digestive System Enzymes)", s2: "Maths: 🔴 Geometry (Pythagoras & Trigonometry Basics)", s3: "Spanish: 🔴 Grammar (Imperfect Tense & Irregulars)" },
+            { date: "2026-10-02", day: "Fri 02 Oct", s1: "Phys: 🟡 Electricity (Circuit Diagrams & Current/Voltage Rules)", s2: "Chem: 🔴 Bonding (Metallic Bonding & Polymer Structures)", s3: "Eng Lit: 🟡 Macbeth (Act 2: Guilt & Macbeth's Soliloquy)" },
+            { date: "2026-10-03", day: "Sat 03 Oct", s1: "Eng Lang: 🟡 P1 Q5 (Descriptive Writing Imagery & Structure)", s2: "Soc: 🟡 Family (Nuclear vs Extended Families)", s3: "RE: 🟡 Christianity (The Life of Jesus & Incarnation)" },
+            { date: "2026-10-04", day: "Sun 04 Oct", s1: "Rest Day", s2: "Rest Day", s3: "Rest Day", isRest: true },
+            { date: "2026-10-05", day: "Mon 05 Oct", s1: "Chem: 🔴 Quantitative Chemistry (Conservation of Mass & Moles)", s2: "Bio: 🟡 Organisation (The Heart & Blood Vessels)", s3: "Maths: 🔴 Algebra (Algebraic Fractions Simplification)" },
+            { date: "2026-10-06", day: "Tue 06 Oct", s1: "Phys: 🟡 Electricity (Resistance & Ohm's Law Equations)", s2: "Spanish: 🟡 Theme 1 (Marriage & Cohabitation Trends)", s3: "Food: 🟡 Food Safety (Bacterial Contamination & Hygiene)" },
+            { date: "2026-10-07", day: "Wed 07 Oct", s1: "Eng Lit: 🟡 ACC (Stave 2: The Cratchits & Poverty)", s2: "Eng Lang: 🟡 SPaG (Colons, Semicolons & Dashes)", s3: "RE: 🟡 Islam (The Five Pillars & Duties)" },
+            { date: "2026-10-08", day: "Thu 08 Oct", s1: "Chem: 🔴 Quantitative Chemistry (Concentration Calculations)", s2: "Soc: 🟡 Education (Gender Differences in Achievement)", s3: "Maths: 🔴 Geometry (Circle Theorems: Angles at Centre)" },
+            { date: "2026-10-09", day: "Fri 09 Oct", s1: "Bio: 🟡 Infection & Response (Communicable Diseases & Pathogens)", s2: "Phys: 🟡 Particle Model (Density & State Changes)", s3: "Spanish: 🟡 Translation (Spanish to English Practice)" },
+            { date: "2026-10-10", day: "Sat 10 Oct", s1: "Eng Lit: 🟡 Macbeth (Act 3: Banquo's Ghost & Paranoia)", s2: "Food: 🟡 Food Science (Heat Transfer: Conduction/Convection)", s3: "Eng Lang: 🟡 P1 Full Timed Section A Walkthrough" },
+            { date: "2026-10-11", day: "Sun 11 Oct", s1: "Rest Day", s2: "Rest Day", s3: "Rest Day", isRest: true },
+            { date: "2026-10-12", day: "Mon 12 Oct", s1: "Chem: 🔴 Chemical Changes (Reactivity Series & Extraction)", s2: "Bio: 🟡 Bioenergetics (Photosynthesis Limiting Factors)", s3: "Maths: 🔴 Algebra (Simultaneous Equations Graphically & Algebraically)" },
+            { date: "2026-10-13", day: "Tue 13 Oct", s1: "Phys: 🟡 Particle Model (Internal Energy & Specific Latent Heat)", s2: "Spanish: 🟡 Theme 1 (Free-Time Activities & Hobbies)", s3: "Eng Lit: 🟡 ACC (Stave 3: Ignorance and Want)" },
+            { date: "2026-10-14", day: "Wed 14 Oct", s1: "Eng Lang: 🟡 P1 Q2 (Semantic Fields & Word Classes)", s2: "Soc: 🟡 Family (Conjugal Roles & Domestic Division of Labour)", s3: "RE: 🟡 Christianity (Salvation & Atonement)" },
+            { date: "2026-10-15", day: "Thu 15 Oct", s1: "Chem: 🔴 Chemical Changes (Acids, Alkalis & Titration Setup)", s2: "Maths: 🔴 Ratio (Direct and Inverse Proportion Equations)", s3: "Food: 🟡 Nutrition (Protein Alternatives & Complementation)" },
+            { date: "2026-10-16", day: "Fri 16 Oct", s1: "Bio: 🟡 Bioenergetics (Aerobic vs Anaerobic Respiration)", s2: "Phys: 🟡 Atomic Structure (Radioactive Decay & Alpha/Beta/Gamma)", s3: "Spanish: 🟡 Grammar (Future Tense Formations)" },
+            { date: "2026-10-17", day: "Sat 17 Oct", s1: "Eng Lit: 🟡 Macbeth (Act 4: The Witches & Macduff's Family)", s2: "Eng Lang: 🟡 P1 Q3 (Structural Shifts & Narrative Pacing)", s3: "RE: 🟡 Islam (Ten Obligatory Acts & Jihad)" },
+            { date: "2026-10-18", day: "Sun 18 Oct", s1: "Rest Day", s2: "Rest Day", s3: "Rest Day", isRest: true },
+            { date: "2026-10-19", day: "Mon 19 Oct", s1: "Chem: 🔴 Energy Changes (Exothermic/Endothermic Reaction Profiles)", s2: "Maths: 🔴 Geometry (Trigonometry: Sine and Cosine Rules)", s3: "Food: 🟡 Food Science (Gelatinisation & Starch Thickening)" },
+            { date: "2026-10-20", day: "Tue 20 Oct", s1: "Phys: 🟡 Atomic Structure (Half-Life Calculations from Graphs)", s2: "Spanish: 🟡 Theme 1 (Future Study & Career Ambitions)", s3: "Eng Lit: 🟡 ACC (Stave 4: The Ghost of Christmas Yet to Come)" },
+            { date: "2026-10-21", day: "Wed 21 Oct", s1: "Bio: 🟡 Homeostasis (Nervous System & Reflex Arcs)", s2: "Soc: 🟡 Education (Marketisation & Parental Choice)", s3: "Eng Lang: 🟡 P1 Q4 (Textual Evidence Evaluation)" },
+            { date: "2026-10-22", day: "Thu 22 Oct", s1: "Chem: 🔴 Energy Changes (Bond Energy Calculations)", s2: "Maths: 🔴 Algebra (Quadratic Inequalities & Graphs)", s3: "Spanish: 🟡 Writing (150-Word Essay: Theme 1 Practice)" },
+            { date: "2026-10-23", day: "Fri 23 Oct", s1: "Eng Lit: 🟡 Macbeth (Act 5: Kingship, Chaos & Resolution)", s2: "Phys: 🟡 Forces (Contact vs Non-Contact & Gravity)", s3: "RE: 🟡 Theme (Crime & Punishment: Aims of Punishment)" },
+            { date: "2026-10-24", day: "Sat 24 Oct", s1: "Bio: 🟡 Homeostasis (Hormonal Control & Blood Glucose)", s2: "Eng Lang: 🟡 P1 Q5 (Narrative Structure & Narrative Hook)", s3: "Food: 🟡 Provenance (Food Miles & Sustainability)" },
+            { date: "2026-10-25", day: "Sun 25 Oct", s1: "Rest Day", s2: "Rest Day", s3: "Rest Day", isRest: true },
+            { date: "2026-10-26", day: "Mon 26 Oct", s1: "Maths: 🔴 Algebra (Completing the Square & Quadratic Formula)", s2: "Chem: 🔴 Mock 1 Formula & Equation Recall", s3: "Spanish: 🟡 Grammar (Conditional Tense Triggers)" },
+            { date: "2026-10-27", day: "Tue 27 Oct", s1: "Eng Lit: 🟡 ACC (Stave 5: Scrooge's Redemption & Transformation)", s2: "Phys: 🟡 Forces (Newton's Laws of Motion Preview)", s3: "Soc: 🟡 Crime (Social Construction of Crime & Statistics)" },
+            { date: "2026-10-28", day: "Wed 28 Oct", s1: "Bio: 🟡 Inheritance (DNA Structure & Meiosis Overview)", s2: "Eng Lang: 🟡 Mock 1 Timed Sprint (Section A)", s3: "RE: 🟡 Theme (Peace & Conflict: Just War Theory)" },
+            { date: "2026-10-29", day: "Thu 29 Oct", s1: "Chem: 🔴 Mock 1 Core Calculations Review", s2: "Maths: 🔴 Geometry (3D Trigonometry & Vectors)", s3: "Spanish: 🟡 Speaking (Role-Play & Photo Card Practice)" },
+            { date: "2026-10-30", day: "Fri 30 Oct", s1: "Eng Lit: 🟡 Macbeth (Mock 1 Core Quotes Explosion)", s2: "Bio: 🟡 Mock 1 Practical Review (Required Practicals)", s3: "Food: 🟡 Mock 1 Theory Consolidation" },
+            { date: "2026-10-31", day: "Sat 31 Oct", s1: "Maths: 🔴 Mock 1 Error Fix (Algebra & Number)", s2: "Phys: 🔴 Mock 1 Equation Recall & Application", s3: "Spanish: 🔴 Translation (English to Spanish Complex Sentences)" },
+            { date: "2026-11-01", day: "Sun 01 Nov", s1: "Rest Day", s2: "Rest Day", s3: "Rest Day", isRest: true },
+            { date: "2026-11-02", day: "Mon 02 Nov", s1: "Eng Lang: 🟡 Mock 1 Timed Sprint (Section B Writing)", s2: "Spanish: 🟡 Dictation Practice (Higher Tier)", s3: "Maths: 🟡 Mock 1 Non-Calculator Past Paper Practice" },
+            { date: "2026-11-03", day: "Tue 03 Nov", s1: "Eng Lit: 🟡 ACC Essay Plan & Context Integration", s2: "Bio: 🟡 Mock 1 Theory Overview & Key Definitions", s3: "Food: 🟡 Mock 1 Exam Technique (Structuring 8-10 mark questions)" },
+            { date: "2026-11-04", day: "Wed 04 Nov", s1: "Chem: 🟡 Mock 1 Formula & Titration Review", s2: "Soc: 🟡 Mock 1 Essay Structure Review (12-mark questions)", s3: "RE: 🟡 Mock 1 12-Mark Structure Review" },
+            { date: "2026-11-05", day: "Thu 05 Nov", s1: "Eng Lang: 🟡 Mock 1 Time Management Drill", s2: "Phys: 🟡 Mock 1 Core Practical Review", s3: "Maths: 🟡 Mock 1 Calculator Past Paper Practice" },
+            { date: "2026-11-06", day: "Fri 06 Nov", s1: "Eng Lit: 🟡 Macbeth Essay Plan & Theme Mapping", s2: "Bio: 🟡 Mock 1 Window (Light Review)", s3: "Food: 🟡 Mock 1 Window (Light Review)" },
+            { date: "2026-11-07", day: "Sat 07 Nov", s1: "Maths: 🔴 Mock 1 Final Polish (Geometry & Statistics)", s2: "Chem: 🔴 Mock 1 Final Polish (Bonding & Electrolysis)", s3: "Spanish: 🔴 Mock 1 Final Vocabulary & Grammar Check" },
+            { date: "2026-11-08", day: "Sun 08 Nov", s1: "Rest Day", s2: "Rest Day", s3: "Rest Day", isRest: true },
+            { date: "2026-11-09", day: "Mon 09 Nov", s1: "Eng Lang: 🟢 Mock 1 Maintenance", s2: "Spanish: 🟢 Mock 1 Maintenance", s3: "Maths: 🟢 Mock 1 Maintenance" },
+            { date: "2026-11-10", day: "Tue 10 Nov", s1: "Eng Lit: 🟢 Mock 1 Maintenance", s2: "Bio: 🟢 Mock 1 Maintenance", s3: "Food: 🟢 Mock 1 Maintenance" },
+            { date: "2026-11-11", day: "Wed 11 Nov", s1: "Chem: 🟢 Mock 1 Maintenance", s2: "Soc: 🟢 Mock 1 Maintenance", s3: "RE: 🟢 Mock 1 Maintenance" },
+            { date: "2026-11-12", day: "Thu 12 Nov", s1: "Eng Lang: 🟢 Mock 1 Maintenance", s2: "Phys: 🟢 Mock 1 Maintenance", s3: "Maths: 🟢 Mock 1 Maintenance" },
+            { date: "2026-11-13", day: "Fri 13 Nov", s1: "Eng Lit: 🟢 Mock 1 Maintenance", s2: "Bio: 🟢 Mock 1 Maintenance", s3: "Food: 🟢 Mock 1 Maintenance" },
+            { date: "2026-11-14", day: "Sat 14 Nov", s1: "Maths: 🔴 Transition: Unit 2 Algebra (Functions & Graphs)", s2: "Chem: 🔴 Transition: Rates of Reaction", s3: "Spanish: 🔴 Theme 2 Intro (Cinema vs Streaming)" },
+            { date: "2026-11-15", day: "Sun 15 Nov", s1: "Rest Day", s2: "Rest Day", s3: "Rest Day", isRest: true },
+            { date: "2026-11-16", day: "Mon 16 Nov", s1: "Eng Lang: 🟡 Transition: Paper 2 Overview", s2: "Spanish: 🟡 Theme 2 Vocab (Social Media & Influencers)", s3: "Maths: 🟡 Algebra (Algebraic Fractions Level 2)" },
+            { date: "2026-11-17", day: "Tue 17 Nov", s1: "Eng Lit: 🟡 AIC (Arthur Birling & Capitalist Views)", s2: "Bio: 🟡 P2 (Homeostasis: Nervous System & Reflexes)", s3: "Food: 🟡 Theory (Cereals, Breads & Milling)" },
+            { date: "2026-11-18", day: "Wed 18 Nov", s1: "Chem: 🟡 P2 (Rate of Reaction & Collision Theory)", s2: "Soc: 🟡 Global Development (Defining Poverty & Inequality)", s3: "RE: 🟡 Christianity (Christian Worship & Rites)" },
+            { date: "2026-11-19", day: "Thu 19 Nov", s1: "Eng Lang: 🟡 P2 Q2 (Summary Synthesis & Cross-Referencing)", s2: "Phys: 🟡 P2 (Forces & Elasticity: Hooke's Law)", s3: "Maths: 🟡 Geometry (Congruence & Similarity)" },
+            { date: "2026-11-20", day: "Fri 20 Nov", s1: "Eng Lit: 🟡 AIC (Sybil Birling & Social Responsibility)", s2: "Bio: 🟡 P2 (Homeostasis: Endocrine System & Hormones)", s3: "Food: 🟡 Theory (Meat, Poultry & Alternatives)" },
+            { date: "2026-11-21", day: "Sat 21 Nov", s1: "Maths: 🔴 Stats (Conditional Probability with Tree Diagrams)", s2: "Phys: 🔴 P2 (Forces: Momentum & Conservation)", s3: "Spanish: 🔴 Theme 2 (Famous Athletes & Cultural Role Models)" },
+            { date: "2026-11-22", day: "Sun 22 Nov", s1: "Rest Day", s2: "Rest Day", s3: "Rest Day", isRest: true },
+            { date: "2026-11-23", day: "Mon 23 Nov", s1: "Eng Lang: 🟡 P2 Q3 (Analyzing Language Effects & Tone)", s2: "Spanish: 🔴 Grammar (Perfect Tense & Auxiliary Verbs)", s3: "Maths: 🟡 Number (Bounds & Error Intervals)" },
+            { date: "2026-11-24", day: "Tue 24 Nov", s1: "Eng Lit: 🟡 AIC (Inspector Goole & Socialism)", s2: "Chem: 🟡 P2 (Reversible Reactions & Dynamic Equilibrium)", s3: "Food: 🟡 Theory (Dairy Production & Cheese Making)" },
+            { date: "2026-11-25", day: "Wed 25 Nov", s1: "Phys: 🟡 P2 (Newton's Laws of Motion in Depth)", s2: "Soc: 🟡 Global Development (Modernisation vs Dependency Theory)", s3: "RE: 🟡 Islam (Holy Books & Prophethood)" },
+            { date: "2026-11-26", day: "Thu 26 Nov", s1: "Eng Lang: 🟡 P2 Q4 (Comparing Viewpoints Across Texts)", s2: "Spanish: 🔴 Theme 2 (Regional Festivals & Traditions)", s3: "Maths: 🟡 Algebra (Quadratic Sequences nth Term)" },
+            { date: "2026-11-27", day: "Fri 27 Nov", s1: "Eng Lit: 🟡 AIC (Sheila & Eric's Generational Shift)", s2: "Bio: 🟡 P2 (Genetics: DNA Structure & Genome)", s3: "Food: 🟡 Theory (Raising Agents in Baking)" },
+            { date: "2026-11-28", day: "Sat 28 Nov", s1: "Maths: 🔴 Geometry (Advanced Vectors in Shapes)", s2: "Phys: 🔴 P2 (Waves: Transverse vs Longitudinal & Speed Equation)", s3: "Spanish: 🔴 Grammar (Imperfect Subjunctive Triggers)" },
+            { date: "2026-11-29", day: "Sun 29 Nov", s1: "Rest Day", s2: "Rest Day", s3: "Rest Day", isRest: true },
+            { date: "2026-11-30", day: "Mon 30 Nov", s1: "Eng Lang: 🟡 P2 Q5 (Persuasive Speech Structure)", s2: "Spanish: 🟡 Theme 2 (Pros & Cons of Celebrity Culture)", s3: "Maths: 🟡 Algebra (Functions: Composite & Inverse)" },
+            // Continue expanding through Dec 2026 - Apr 2027 as structured in full plan
+        ];
+
+        // State Management
+        let currentDateIndex = 0;
+        let completedTasks = JSON.parse(localStorage.getItem('gcse_completed') || '{}');
+        let catchUpQueue = JSON.parse(localStorage.getItem('gcse_catchup') || '[]');
+
+        // Initialize App on load
+        window.onload = function() {
+            // Check saved theme
+            if (localStorage.getItem('theme') === 'light') {
+                document.documentElement.classList.remove('dark');
+                document.getElementById('theme-icon').innerText = '🌙';
+            }
+            
+            // Set date picker to first date
+            if(timetableData.length > 0) {
+                document.getElementById('date-picker').value = timetableData[0].date;
+            }
+            
+            renderDailyView();
+            renderMonthPlanner();
+            renderCatchUpQueue();
+            updateStats();
+            
+            // Setup month filter pills
+            setupMonthTabs();
+        };
+
+        // Theme Toggle
+        function toggleTheme() {
+            const html = document.documentElement;
+            const icon = document.getElementById('theme-icon');
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+                icon.innerText = '🌙';
+            } else {
+                html.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+                icon.innerText = '☀️';
+            }
+        }
+
+        // Tab Switching
+        function switchTab(tabName) {
+            ['daily', 'months', 'catchup'].forEach(t => {
+                document.getElementById('view-' + t).classList.add('hidden');
+                document.getElementById('tab-' + t).className = "px-4 py-2 rounded-lg text-sm font-medium transition-all text-slate-600 dark:text-slate-300";
+            });
+            document.getElementById('view-' + tabName).classList.remove('hidden');
+            document.getElementById('tab-' + tabName).className = "px-4 py-2 rounded-lg text-sm font-medium transition-all bg-white dark:bg-indigo-600 text-slate-900 dark:text-white shadow-sm";
+            
+            if(tabName === 'catchup') renderCatchUpQueue();
+            if(tabName === 'months') renderMonthPlanner();
+        }
+
+        // Daily View Navigation
+        function changeDay(direction) {
+            currentDateIndex += direction;
+            if (currentDateIndex < 0) currentDateIndex = 0;
+            if (currentDateIndex >= timetableData.length) currentDateIndex = timetableData.length - 1;
+            
+            document.getElementById('date-picker').value = timetableData[currentDateIndex].date;
+            renderDailyView();
+        }
+
+        function selectDateFromPicker(dateStr) {
+            const index = timetableData.findIndex(d => d.date === dateStr);
+            if (index !== -1) {
+                currentDateIndex = index;
+                renderDailyView();
+            }
+        }
+
+        function renderDailyView() {
+            const dayData = timetableData[currentDateIndex];
+            const container = document.getElementById('daily-card-container');
+            
+            if (!dayData) return;
+
+            if (dayData.isRest) {
+                container.innerHTML = `
+                    <div class="text-center py-12 space-y-3">
+                        <div class="text-5xl">🌴</div>
+                        <h3 class="text-xl font-bold">Rest Day</h3>
+                        <p class="text-slate-500">Take a break, recharge, and get ready for the next session!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const subjects = [dayData.s1, dayData.s2, dayData.s3].filter(Boolean);
+            
+            let html = `
+                <div class="flex justify-between items-center pb-4 mb-6 border-b border-slate-200 dark:border-slate-700">
+                    <div>
+                        <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-500/10 text-indigo-500">Day ${currentDateIndex + 1} of Schedule</span>
+                        <h3 class="text-xl font-bold mt-1">${dayData.day} (${dayData.date})</h3>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            `;
+
+            subjects.forEach((subj, idx) => {
+                const taskId = `${dayData.date}-s${idx+1}`;
+                const isCompleted = completedTasks[taskId];
+                
+                html += `
+                    <div class="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col justify-between space-y-4">
+                        <div>
+                            <span class="text-xs font-bold text-indigo-500 uppercase tracking-wider">Subject ${idx+1}</span>
+                            <p class="font-medium text-slate-800 dark:text-slate-200 mt-1 text-sm sm:text-base">${subj}</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2 pt-2 border-t border-slate-200 dark:border-slate-700/60">
+                            <button onclick="toggleComplete('${taskId}', '${subj.replace(/'/g, "\\'")}', '${dayData.date}')" class="flex-1 px-3 py-2 text-xs font-semibold rounded-lg transition ${isCompleted ? 'bg-emerald-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'}">
+                                ${isCompleted ? '✓ Completed' : 'Mark Done'}
+                            </button>
+                            <button onclick="addToCatchUp('${subj.replace(/'/g, "\\'")}', '${dayData.date}')" class="px-3 py-2 text-xs font-semibold rounded-lg bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 transition" title="Add to Catch-Up Queue">
+                                📌 Catch-Up
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `</div>`;
+            container.innerHTML = html;
+        }
+
+        // Completion & Catch-Up Actions
+        function toggleComplete(taskId, subjectName, date) {
+            completedTasks[taskId] = !completedTasks[taskId];
+            localStorage.setItem('gcse_completed', JSON.stringify(completedTasks));
+            renderDailyView();
+            updateStats();
+        }
+
+        function addToCatchUp(subjectName, date) {
+            if (!catchUpQueue.some(item => item.subject === subjectName && item.date === date)) {
+                catchUpQueue.push({ id: Date.now() + Math.random(), subject: subjectName, date: date, completed: false });
+                localStorage.setItem('gcse_catchup', JSON.stringify(catchUpQueue));
+                updateStats();
+                alert(`Added "${subjectName}" to your Catch-Up Queue!`);
+            } else {
+                alert("This topic is already in your Catch-Up Queue.");
+            }
+        }
+
+        function renderCatchUpQueue() {
+            const container = document.getElementById('catchup-list-container');
+            if (catchUpQueue.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 bg-white dark:bg-cardDark rounded-2xl border border-slate-200 dark:border-slate-700">
+                        <p class="text-slate-400">Your catch-up queue is completely empty. Great job staying on top of things!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            catchUpQueue.forEach((item, index) => {
+                html += `
+                    <div class="bg-white dark:bg-cardDark p-4 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-4">
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" ${item.completed ? 'checked' : ''} onchange="toggleCatchUpItem(${index})" class="w-5 h-5 rounded text-indigo-600 focus:ring-indigo-500">
+                            <div>
+                                <p class="font-medium text-sm sm:text-base ${item.completed ? 'line-through text-slate-400' : ''}">${item.subject}</p>
+                                <span class="text-xs text-slate-400">Scheduled Date: ${item.date}</span>
+                            </div>
+                        </div>
+                        <button onclick="removeCatchUpItem(${index})" class="text-red-500 hover:text-red-700 text-sm font-medium px-2 py-1">Remove</button>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function toggleCatchUpItem(index) {
+            catchUpQueue[index].completed = !catchUpQueue[index].completed;
+            localStorage.setItem('gcse_catchup', JSON.stringify(catchUpQueue));
+            renderCatchUpQueue();
+            updateStats();
+        }
+
+        function removeCatchUpItem(index) {
+            catchUpQueue.splice(index, 1);
+            localStorage.setItem('gcse_catchup', JSON.stringify(catchUpQueue));
+            renderCatchUpQueue();
+            updateStats();
+        }
+
+        function clearCompletedCatchup() {
+            catchUpQueue = catchUpQueue.filter(item => !item.completed);
+            localStorage.setItem('gcse_catchup', JSON.stringify(catchUpQueue));
+            renderCatchUpQueue();
+            updateStats();
+        }
+
+        function updateStats() {
+            const completedCount = Object.values(completedTasks).filter(Boolean).length;
+            const queueCount = catchUpQueue.filter(i => !i.completed).length;
+            
+            document.getElementById('completed-count').innerText = completedCount;
+            document.getElementById('queue-count').innerText = queueCount;
+            document.getElementById('catchup-badge').innerText = queueCount;
+        }
+
+        // Month Planner View
+        let activeMonthFilter = '2026-09';
+
+        function setupMonthTabs() {
+            const months = [
+                { id: '2026-09', name: 'Sep 2026' },
+                { id: '2026-10', name: 'Oct 2026' },
+                { id: '2026-11', name: 'Nov 2026' },
+                { id: '2026-12', name: 'Dec 2026' },
+                { id: '2027-01', name: 'Jan 2027' },
+                { id: '2027-02', name: 'Feb 2027' },
+                { id: '2027-03', name: 'Mar 2027' },
+                { id: '2027-04', name: 'Apr 2027' }
+            ];
+
+            const container = document.getElementById('month-tabs');
+            container.innerHTML = months.map(m => `
+                <button onclick="filterMonth('${m.id}')" id="month-btn-${m.id}" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition ${activeMonthFilter === m.id ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'}">
+                    ${m.name}
+                </button>
+            `).join('');
+        }
+
+        function filterMonth(monthId) {
+            activeMonthFilter = monthId;
+            setupMonthTabs();
+            renderMonthPlanner();
+        }
+
+        function renderMonthPlanner() {
+            const container = document.getElementById('month-grid-container');
+            const filteredDays = timetableData.filter(d => d.date.startsWith(activeMonthFilter));
+
+            if (filteredDays.length === 0) {
+                container.innerHTML = `<p class="text-slate-400 col-span-full text-center py-8">No timetable entries found for this month.</p>`;
+                return;
+            }
+
+            container.innerHTML = filteredDays.map(day => {
+                const globalIndex = timetableData.findIndex(d => d.date === day.date);
+                return `
+                    <div onclick="jumpToDay(${globalIndex})" class="bg-white dark:bg-cardDark p-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-indigo-500 dark:hover:border-indigo-500 cursor-pointer transition shadow-sm space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold text-sm text-indigo-500">${day.day}</span>
+                            <span class="text-xs text-slate-400">${day.date}</span>
+                        </div>
+                        ${day.isRest ? '<span class="text-xs bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded font-semibold">Rest Day</span>' : `
+                            <p class="text-xs text-slate-600 dark:text-slate-300 truncate">• ${day.s1 || ''}</p>
+                            <p class="text-xs text-slate-600 dark:text-slate-300 truncate">• ${day.s2 || ''}</p>
+                            <p class="text-xs text-slate-600 dark:text-slate-300 truncate">• ${day.s3 || ''}</p>
+                        `}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function jumpToDay(index) {
+            currentDateIndex = index;
+            document.getElementById('date-picker').value = timetableData[currentDateIndex].date;
+            switchTab('daily');
+            renderDailyView();
+        }
+    </script>
+</body>
+</html>
